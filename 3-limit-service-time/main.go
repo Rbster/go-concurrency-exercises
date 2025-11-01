@@ -10,7 +10,10 @@
 
 package main
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // User defines the UserModel. Use this to check whether a User is a
 // Premium user or not
@@ -18,6 +21,7 @@ type User struct {
 	ID        int
 	IsPremium bool
 	TimeUsed  int64 // in seconds
+	mux       sync.Mutex
 }
 
 // HandleRequest runs the processes requested by users. Returns false
@@ -25,7 +29,15 @@ type User struct {
 func HandleRequest(process func(), u *User) bool {
 	b := time.Now()
 	process()
-	return time.Since(b) <= 10*time.Second
+
+	if u.IsPremium {
+		return true
+	}
+
+	u.mux.Lock()
+	defer u.mux.Unlock()
+	u.TimeUsed += int64(time.Since(b) / time.Second)
+	return time.Duration(u.TimeUsed)*time.Second <= 10*time.Second
 }
 
 func main() {

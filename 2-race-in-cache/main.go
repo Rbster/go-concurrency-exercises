@@ -46,14 +46,19 @@ func New(load KeyStoreCacheLoader) *KeyStoreCache {
 
 // Get gets the key from cache, loads it from the source if needed
 func (k *KeyStoreCache) Get(key string) string {
+
 	k.mux.Lock()
 	e, ok := k.cache[key] // cache read
+
 	if ok {
+
 		k.pages.MoveToFront(e) // pages list read-write
 		k.mux.Unlock()
 		return e.Value.(page).Value
 	}
 
+	k.mux.Lock()
+	k.mux.Unlock()
 	// Miss - load from database and save it in cache
 	p := page{key, k.load(key)} // outer read -- safe because dont write
 	// if cache is full remove the least used item
